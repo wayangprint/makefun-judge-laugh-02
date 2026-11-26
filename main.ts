@@ -9,10 +9,14 @@
 // ever written, so the gate sees exactly one line of 1-200 characters.
 //
 // Where the file lands:
-//   - always next to this script (entry.txt in the repo folder), and
-//   - MAKEFUN_OUTPUT_DIR when that variable is set (per-run scratch dirs
-//     used while verifying determinism), otherwise /output when that
-//     directory already exists (the grading sandbox case).
+//   - MAKEFUN_OUTPUT_DIR when that variable is set (the grading sandbox
+//     sets it to /output, and per-run scratch dirs are used while
+//     verifying determinism), otherwise /output when that directory
+//     already exists (the grading sandbox case), otherwise next to this
+//     script (entry.txt in the repo folder, local runs only). The script
+//     folder is never written when an output folder is available: the
+//     grading sandbox mounts the repository read-only, so a write there
+//     would throw and fail the run.
 
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -25,15 +29,14 @@ function singleLine(segments: readonly string[]): string {
 }
 
 function outputFolders(): string[] {
-  const scriptDir = new URL(".", import.meta.url).pathname;
-  const folders: string[] = [scriptDir];
   const override = (process.env.MAKEFUN_OUTPUT_DIR ?? "").trim();
   if (override.length > 0) {
-    folders.push(override);
-  } else if (existsSync("/output")) {
-    folders.push("/output");
+    return [override];
   }
-  return folders;
+  if (existsSync("/output")) {
+    return ["/output"];
+  }
+  return [new URL(".", import.meta.url).pathname];
 }
 
 function emit(line: string): void {
